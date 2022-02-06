@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fatih/color"
 	"sync"
@@ -11,6 +12,9 @@ type ClientManager struct {
 	connCh          chan *Client
 	disConnCh       chan *Client
 	broadcastCh     chan *Client
+
+	once  sync.Once
+	mutex sync.Mutex
 }
 
 func (m *ClientManager) Connect(client *Client) {
@@ -63,8 +67,15 @@ func (m *ClientManager) Loop() {
 	}
 }
 func (m *ClientManager) Close() {
+	m.mutex.Lock()
 	close(m.connCh)
 	close(m.disConnCh)
+	m.clientUserIdMap.Range(func(key, value interface{}) bool {
+		client := value.(*Client)
+		client.Close(errors.New("client manager closed"))
+		return true
+	})
+	m.mutex.Unlock()
 }
 
 var (
@@ -79,6 +90,7 @@ func GetClientManagerInstance() *ClientManager {
 			connCh:          make(chan *Client, 1000),
 			disConnCh:       make(chan *Client, 1000),
 			broadcastCh:     make(chan *Client, 1000),
+			mutex:           sync.Mutex{},
 		}
 	})
 	return instanceClientManager

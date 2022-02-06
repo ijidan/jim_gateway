@@ -104,7 +104,7 @@ func (c *Client) ReadMessage() {
 				}
 			}
 		}
-		//color.Yellow("message received:%s", string(messageContent))
+		color.Yellow("message received:%s", string(messageContent))
 		message := NewMessage(0, c.userId, messageContent)
 		c.Send(message)
 	}
@@ -127,7 +127,7 @@ func (c *Client) WriteMessage() {
 			var err error
 			if c.connType == ConnTypeTcp {
 				content, _ := Pack("ping")
-				//color.Green("message send:%s", string(message.data))
+				color.Green("message send:%s", string(message.data))
 				_, err = c.tcpConn.Write(content)
 			} else {
 				err = c.wsConn.WriteMessage(websocket.TextMessage, message.data)
@@ -162,7 +162,7 @@ func (c *Client) WriteMessage() {
 
 func (c *Client) Send(message *Message) {
 	if c.isRunning {
-		//color.Green("message send:%s", string(message.data))
+		color.Green("message send:%s", string(message.data))
 		c.writeCh <- message
 	}
 }

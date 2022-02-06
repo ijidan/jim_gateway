@@ -32,11 +32,17 @@ func (ws webSocket) handleConnection(w http.ResponseWriter, r *http.Request) {
 	ws.conn = conn
 	clientId := r.FormValue("client_id")
 	userId := cast.ToUint64(r.FormValue("user_id"))
+	if clientId == "" || userId == 0 {
+		err := conn.Close()
+		if err != nil {
+			return
+		}
+	}
 	client := NewWsClient(userId, clientId, ws.server, conn)
 	ws.server.AddClient(client)
 
-	//clientManager := GetClientManagerInstance()
-	//clientManager.Connect(client)
+	clientManager := GetClientManagerInstance()
+	clientManager.Connect(client)
 
 	message := NewMessage(0, userId, []byte("welcome"))
 	client.Send(message)

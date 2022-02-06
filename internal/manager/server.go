@@ -1,6 +1,9 @@
 package manager
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 const ServerMaxClientNum = 1000 //群员最大数量
 
@@ -16,6 +19,11 @@ func (s *Server) GetAddress() string {
 }
 
 func (s *Server) AddClient(client *Client) {
+	oldValue, ok := s.clientList.Load(client.GetClientId())
+	if ok {
+		oldClient := oldValue.(*Client)
+		oldClient.Close(errors.New("kick off"))
+	}
 	s.clientList.Store(client.GetClientId(), client)
 }
 
