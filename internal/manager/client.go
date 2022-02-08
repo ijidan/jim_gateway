@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
@@ -44,6 +45,7 @@ func (c *Client) GetServer() *Server {
 }
 
 func (c *Client) ReadMessage() {
+	clientManager:=GetClientManagerInstance()
 	for {
 		if c.isRunning == false {
 			return
@@ -106,9 +108,27 @@ func (c *Client) ReadMessage() {
 		}
 		color.Yellow("message received:%s", string(messageContent))
 		message := NewMessage(0, c.userId, messageContent)
-		c.Send(message)
+		//c.Send(message)
+		var data json.RawMessage
+		msg:=ClientMessage{
+			Data: &data,
+		}
+		if err3 := json.Unmarshal(messageContent, &msg); err3 != nil {
+			color.Red("parse message err:%s",err3.Error())
+		}
+		switch msg.Cmd {
+		case "chat.c2c.txt":
+			content:=TextMessage{}
+			if err4 := json.Unmarshal(data, &content); err4 != nil {
+				color.Red("parse message err:%s",err4.Error())
+			}
+			toReceiverId:=content.ToReceiverId
+			toClient:=clientManager.GetClientByClientId(toReceiverId)
+			if toClient!=nil && toClient.isRunning{
+				toClient.Send(message)
+			}
+		}
 	}
-
 }
 func (c *Client) WriteMessage() {
 	ticker := time.NewTicker(1 * time.Second)

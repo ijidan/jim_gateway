@@ -18,6 +18,7 @@ import (
 )
 
 var num = flag.Int("num", 1, "conn num")
+var id=flag.Int("id",0,"client id")
 var mutex = sync.Mutex{}
 
 func connect(address *net.TCPAddr, clientId string, userId int) {
@@ -109,10 +110,16 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("tcp resolve err:%s", err.Error())
 	}
-	for i := 0; i < *num; i++ {
-		clientId := fmt.Sprintf("client_id_%d", i+1)
-		connect(addr, clientId, i+1)
+	if *id>0{
+		clientId := fmt.Sprintf("%d", id)
+		go connect(addr, clientId, *id)
+	}else {
+		for i := 0; i < *num; i++ {
+			clientId := fmt.Sprintf("client_id_%d", i+1)
+			go connect(addr, clientId, i+1)
+		}
 	}
+
 	logrus.Println("waiting...")
 	select {}
 

@@ -15,6 +15,7 @@ import (
 )
 
 var num = flag.Int("num", 1, "conn num")
+var id = flag.Int("id", 0, "client id")
 var mutex = sync.Mutex{}
 
 func connect(u url.URL, clientId string, userId int) {
@@ -75,11 +76,15 @@ func main() {
 	flag.Parse()
 	var address = fmt.Sprintf("%s:%d", pkg.Conf.Websocket.Host, pkg.Conf.Websocket.Port)
 	u := url.URL{Scheme: "ws", Host: address, Path: "/"}
-	for i := 0; i < *num; i++ {
-		clientId := fmt.Sprintf("client_id_%d", i+1)
-		go connect(u, clientId, i+1)
+	if *id > 0 {
+		clientId := fmt.Sprintf("client_%d", *id)
+		go connect(u, clientId, *id)
+	} else {
+		for i := 0; i < *num; i++ {
+			clientId := fmt.Sprintf("client_id_%d", i+1)
+			go connect(u, clientId, i+1)
+		}
 	}
 	logrus.Println("waiting...")
 	select {}
-
 }

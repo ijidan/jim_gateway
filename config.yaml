@@ -2,7 +2,6 @@ app:
   name: Jim_message
   ver: 1.0.1
   env: local
-
 websocket:
   host: 127.0.0.1
   port: 9000
@@ -20,3 +19,7 @@ rpc:
 jaeger:
   host: 127.0.0.1 #172.17.0.1
   port: 6831
+
+pubsub:
+  brokers:
+    - "127.0.0.1:9092"

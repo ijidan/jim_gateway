@@ -37,6 +37,9 @@ type Config struct {
 		Host string `yaml:"host"`
 		Port uint   `yaml:"port"`
 	}
+	PubSub struct{
+		Brokers []string `yaml:"brokers"`
+	}
 }
 
 var (

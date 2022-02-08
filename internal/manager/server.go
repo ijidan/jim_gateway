@@ -2,6 +2,9 @@ package manager
 
 import (
 	"errors"
+	"github.com/fatih/color"
+	"github.com/spf13/cast"
+	"jim_message/internal/dispatch"
 	"sync"
 )
 
@@ -25,6 +28,10 @@ func (s *Server) AddClient(client *Client) {
 		oldClient.Close(errors.New("kick off"))
 	}
 	s.clientList.Store(client.GetClientId(), client)
+	err:=dispatch.PublishCmdLogin(cast.ToUint64(client.clientId),cast.ToUint64(client.clientId))
+	if err!=nil{
+		color.Red("dispatch:cmd:login error:%s",err.Error())
+	}
 }
 
 func (s *Server) RemoveClient(client *Client) {
