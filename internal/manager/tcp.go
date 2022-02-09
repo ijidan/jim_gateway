@@ -8,7 +8,6 @@ import (
 )
 
 type Tcp struct {
-	server *Server
 	conn   *net.Conn
 	err    error
 }
@@ -33,9 +32,7 @@ func StartTcpServer(host string, port uint) {
 		if err2 != nil {
 			logrus.Fatalf("tcp accept error:%s", err2.Error())
 		}
-		var server = NewServer(address)
-		client := NewTcpClient(0, "", server, conn, pkg.Conf.Runtime.Mode)
-		server.AddClient(client)
+		client := NewTcpClient(0, "", conn, pkg.Conf.Gateway.Id,pkg.Conf.Runtime.Mode)
 		clientManager.Connect(client)
 	}
 

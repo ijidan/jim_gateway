@@ -34,7 +34,7 @@ func GetGatewayServiceSendMessageClient() proto_build.GatewayService_SendMessage
 	return gatewayServiceSendMessageClient
 }
 
-func RegisterGateway(gatewayId uint64)  {
+func RegisterGateway(gatewayId string)  {
 	client:=GetGatewayServiceClientInstance()
 	push,_:=client.SendMessage(context.TODO())
 	sendMessage:=&proto_build.SendMessageRequest{
@@ -47,7 +47,7 @@ func RegisterGateway(gatewayId uint64)  {
 	}
 }
 
-func RegisterClient(gatewayId uint64,clientId string)  {
+func RegisterClient(gatewayId string,clientId string)  {
 	client:=GetGatewayServiceClientInstance()
 	req:=&proto_build.RegisterRequest{
 		GatewayId: gatewayId,
@@ -56,7 +56,7 @@ func RegisterClient(gatewayId uint64,clientId string)  {
 	_,_=client.Register(context.TODO(),req)
 }
 
-func UnRegisterClient(gatewayId uint64,clientId string)  {
+func UnRegisterClient(gatewayId string,clientId string)  {
 	client:=GetGatewayServiceClientInstance()
 	req:=&proto_build.UnRegisterRequest{
 		GatewayId: gatewayId,

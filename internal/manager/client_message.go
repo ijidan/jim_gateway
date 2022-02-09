@@ -89,7 +89,7 @@ func ParseC2CTxtMessage(data json.RawMessage,messageContent []byte)  {
 	}
 
 	toReceiverId := content.ToReceiverId
-	color.Cyan("parse txt message:%d",toReceiverId)
+	color.Cyan("parse txt message:%s",toReceiverId)
 	toClient := clientManager.GetClientByClientId(toReceiverId)
 
 	if toClient != nil && toClient.isRunning {

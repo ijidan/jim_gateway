@@ -41,7 +41,7 @@ type Config struct {
 		Brokers []string `yaml:"brokers"`
 	}
 	Gateway struct{
-		Id uint64 `yaml:"id"`
+		Id string `yaml:"id"`
 	}
 	Runtime struct{
 		Mode string `yaml:"mode"`

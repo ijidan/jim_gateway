@@ -12,7 +12,6 @@ import (
 //ws类
 type webSocket struct {
 	upGrader *websocket.Upgrader
-	server   *Server
 	conn     *websocket.Conn
 	err      error
 }
@@ -39,13 +38,12 @@ func (ws webSocket) handleConnection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWsClient(userId, clientId, ws.server, conn,pkg.Conf.Runtime.Mode)
-	ws.server.AddClient(client)
+	client := NewWsClient(userId, clientId,conn,pkg.Conf.Gateway.Id,pkg.Conf.Runtime.Mode)
 
 	clientManager := GetClientManagerInstance()
 	clientManager.Connect(client)
 
-	if pkg.Conf.Runtime.Mode==ModelGrpc.String(){
+	if pkg.Conf.Runtime.Mode==ModelGrpc.String()||pkg.Conf.Runtime.Mode==ModelKafka.String(){
 		RegisterClient(pkg.Conf.Gateway.Id,clientId)
 	}
 	client.Send([]byte("welcome"))
@@ -58,10 +56,8 @@ func StartWsServer(host string, port uint) {
 		clientManager.Close()
 	}()
 	var address = fmt.Sprintf("%s:%d", host, port)
-	var server = NewServer(address)
 	ws := webSocket{
 		upGrader: upGrader,
-		server:   server,
 	}
 	http.HandleFunc("/", ws.handleConnection)
 	err := http.ListenAndServe(address, nil)

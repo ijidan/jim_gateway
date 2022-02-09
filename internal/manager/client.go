@@ -24,17 +24,17 @@ const (
 )
 
 type Client struct {
-	clientId  string  //client id
-	server    *Server //server
-	userId    uint64  //user id
+	clientId  string //client id
+	userId    uint64 //user id
 	connType  ConnType
 	tcpConn   *net.TCPConn    //tcp conn
 	wsConn    *websocket.Conn //websocket conn
-	readCh    chan []byte   //read message channel
-	writeCh   chan []byte   //send message channel
+	readCh    chan []byte     //read message channel
+	writeCh   chan []byte     //send message channel
 	closeCh   chan byte
 	mutex     sync.Mutex
 	isRunning bool
+	gatewayId string
 	mode      string
 }
 
@@ -42,12 +42,8 @@ func (c *Client) GetClientId() string {
 	return c.clientId
 }
 
-func (c *Client) GetServer() *Server {
-	return c.server
-}
-
 func (c *Client) ReadMessage() {
-	clientManager:=GetClientManagerInstance()
+	clientManager := GetClientManagerInstance()
 	for {
 		if c.isRunning == false {
 			return
@@ -108,7 +104,7 @@ func (c *Client) ReadMessage() {
 			}
 		}
 		color.Yellow("message received:%s", string(messageContent))
-		if c.mode==ModeLocal.String(){
+		if c.mode == ModeLocal.String() {
 			var data json.RawMessage
 			msg := ClientMessage{
 				Data: &data,
@@ -118,27 +114,31 @@ func (c *Client) ReadMessage() {
 			}
 			switch msg.Cmd {
 			case "auth.req":
-				clientId,userId:=ParseAuthReqMessage(data)
-				c.clientId=clientId
-				c.userId=userId
+				clientId, userId := ParseAuthReqMessage(data)
+				c.clientId = clientId
+				c.userId = userId
 				clientManager.Connect(c)
 			case "chat.c2c.txt":
-				ParseC2CTxtMessage(data,messageContent)
+				ParseC2CTxtMessage(data, messageContent)
 			}
 		}
-		if c.mode==ModelGrpc.String(){
+		if c.mode == ModelGrpc.String() {
 			req := &proto_build.SendMessageRequest{
-				GatewayId: 1,
+				GatewayId: c.gatewayId,
 				Data:      messageContent,
 			}
-			sendClient:=GetGatewayServiceSendMessageClient()
+			sendClient := GetGatewayServiceSendMessageClient()
 			errSend1 := sendClient.Send(req)
 			if errSend1 != nil {
 				color.Red("send client send message error:%s", errSend1.Error())
 			}
 		}
 
-		if c.mode==ModelKafka.String(){
+		if c.mode == ModelKafka.String() {
+			pubErr := PublishSendMessage(messageContent)
+			if pubErr != nil {
+				color.Red("publish message error:%s", pubErr.Error())
+			}
 		}
 	}
 }
@@ -216,10 +216,9 @@ func (c *Client) Close(err error) {
 	logrus.Println("close triggered:%s", err.Error())
 }
 
-func NewWsClient(userId uint64, clientId string, server *Server, conn *websocket.Conn, mode string) *Client {
+func NewWsClient(userId uint64, clientId string, conn *websocket.Conn, gatewayId string, mode string) *Client {
 	client := &Client{
 		clientId:  clientId,
-		server:    server,
 		userId:    userId,
 		connType:  ConnTypeWs,
 		tcpConn:   nil,
@@ -229,6 +228,7 @@ func NewWsClient(userId uint64, clientId string, server *Server, conn *websocket
 		closeCh:   make(chan byte),
 		mutex:     sync.Mutex{},
 		isRunning: true,
+		gatewayId: gatewayId,
 		mode:      mode,
 	}
 	go client.ReadMessage()
@@ -236,10 +236,9 @@ func NewWsClient(userId uint64, clientId string, server *Server, conn *websocket
 	return client
 }
 
-func NewTcpClient(userId uint64, clientId string, server *Server, conn *net.TCPConn, mode string) *Client {
+func NewTcpClient(userId uint64, clientId string, conn *net.TCPConn, gatewayId string, mode string) *Client {
 	client := &Client{
 		clientId:  clientId,
-		server:    server,
 		userId:    userId,
 		connType:  ConnTypeTcp,
 		tcpConn:   conn,
@@ -249,6 +248,7 @@ func NewTcpClient(userId uint64, clientId string, server *Server, conn *net.TCPC
 		closeCh:   make(chan byte),
 		mutex:     sync.Mutex{},
 		isRunning: true,
+		gatewayId: gatewayId,
 		mode:      mode,
 	}
 	go client.ReadMessage()

@@ -24,7 +24,7 @@ pubsub:
   brokers:
     - "127.0.0.1:9092"
 gateway:
-  id: 1
+  id: g1
 
 runtime:
-  mode : grpc #local kafka grpc
+  mode : kafka #local kafka grpc
