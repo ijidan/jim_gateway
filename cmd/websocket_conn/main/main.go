@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"io"
-	"jim_message/pkg"
+	"jim_gateway/pkg"
 	"net/url"
 	"runtime"
 	"sync"

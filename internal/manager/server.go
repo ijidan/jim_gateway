@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/fatih/color"
 	"github.com/spf13/cast"
-	"jim_message/internal/dispatch"
+	"jim_gateway/internal/dispatch"
 	"sync"
 )
 

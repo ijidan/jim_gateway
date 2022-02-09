@@ -1,0 +1,3 @@
+[submodule "internal/jim_proto"]
+	path = internal/jim_proto
+	url = https://fp-anzhu@bitbucket.org/fp-anzhu/jim_proto.git

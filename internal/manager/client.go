@@ -9,8 +9,12 @@ import (
 	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cast"
 	"io"
+	"jim_gateway/internal/call"
+	"jim_gateway/internal/jim_proto/proto_build"
 	"net"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -29,11 +33,12 @@ type Client struct {
 	connType  ConnType
 	tcpConn   *net.TCPConn    //tcp conn
 	wsConn    *websocket.Conn //websocket conn
-	readCh    chan *Message   //read message channel
-	writeCh   chan *Message   //send message channel
+	readCh    chan []byte   //read message channel
+	writeCh   chan []byte   //send message channel
 	closeCh   chan byte
 	mutex     sync.Mutex
 	isRunning bool
+	mode      string
 }
 
 func (c *Client) GetClientId() string {
@@ -53,7 +58,6 @@ func (c *Client) ReadMessage() {
 		var messageContent []byte
 		var err error
 		if c.connType == ConnTypeTcp {
-
 			reader := bufio.NewReader(c.tcpConn)
 			header, err0 := reader.Peek(HeaderFlagLen + HeaderBodyLen)
 			if err0 != nil {
@@ -106,27 +110,59 @@ func (c *Client) ReadMessage() {
 				}
 			}
 		}
+
 		color.Yellow("message received:%s", string(messageContent))
-		message := NewMessage(0, c.userId, messageContent)
-		//c.Send(message)
-		var data json.RawMessage
-		msg:=ClientMessage{
-			Data: &data,
-		}
-		if err3 := json.Unmarshal(messageContent, &msg); err3 != nil {
-			color.Red("parse message err:%s",err3.Error())
-		}
-		switch msg.Cmd {
-		case "chat.c2c.txt":
-			content:=TextMessage{}
-			if err4 := json.Unmarshal(data, &content); err4 != nil {
-				color.Red("parse message err:%s",err4.Error())
+
+		if c.mode==ModeLocal.String(){
+			var data json.RawMessage
+			msg := ClientMessage{
+				Data: &data,
 			}
-			toReceiverId:=content.ToReceiverId
-			toClient:=clientManager.GetClientByClientId(toReceiverId)
-			if toClient!=nil && toClient.isRunning{
-				toClient.Send(message)
+			if err3 := json.Unmarshal(messageContent, &msg); err3 != nil {
+				color.Red("parse message err:%s", err3.Error())
 			}
+			switch msg.Cmd {
+			case "auth.req":
+				var content AuthMessage
+				if err4 := json.Unmarshal(data, &content); err4 != nil {
+					color.Red("parse message err:%s", err4.Error())
+				}
+				token:=content.Token
+				clientId:=token
+
+				re := regexp.MustCompile("[0-9]+")
+				all:=re.FindAllString(clientId, -1)
+				userId:=all[0]
+
+				c.clientId=clientId
+				c.userId=cast.ToUint64(userId)
+
+				clientManager.Connect(c)
+			case "chat.c2c.txt":
+				var content TextMessage
+				if err4 := json.Unmarshal(data, &content); err4 != nil {
+					color.Red("parse message err:%s", err4.Error())
+				}
+				toReceiverId := content.ToReceiverId
+				toClient := clientManager.GetClientByClientId(toReceiverId)
+				if toClient != nil && toClient.isRunning {
+					toClient.Send(messageContent)
+				}
+			}
+		}
+		if c.mode==ModelGrpc.String(){
+			req := &proto_build.SendMessageRequest{
+				GatewayId: 1,
+				Data:      messageContent,
+			}
+			sendClient:=call.GetGatewayServiceSendMessageClient()
+			errSend1 := sendClient.Send(req)
+			if errSend1 != nil {
+				color.Red("send client send message error:%s", errSend1.Error())
+			}
+		}
+
+		if c.mode==ModelKafka.String(){
 		}
 	}
 }
@@ -161,10 +197,10 @@ func (c *Client) WriteMessage() {
 			if ok {
 				var err error
 				if c.connType == ConnTypeTcp {
-					content, _ := Pack(string(message.data))
+					content, _ := Pack(string(message))
 					_, err = c.tcpConn.Write(content)
 				} else {
-					err = c.wsConn.WriteMessage(websocket.TextMessage, message.data)
+					err = c.wsConn.WriteMessage(websocket.TextMessage, message)
 				}
 				if err != nil {
 					c.Close(err)
@@ -180,9 +216,9 @@ func (c *Client) WriteMessage() {
 
 }
 
-func (c *Client) Send(message *Message) {
+func (c *Client) Send(message []byte) {
 	if c.isRunning {
-		color.Green("message send:%s", string(message.data))
+		color.Green("message send:%s", string(message))
 		c.writeCh <- message
 	}
 }
@@ -204,7 +240,7 @@ func (c *Client) Close(err error) {
 	logrus.Println("close triggered:%s", err.Error())
 }
 
-func NewWsClient(userId uint64, clientId string, server *Server, conn *websocket.Conn) *Client {
+func NewWsClient(userId uint64, clientId string, server *Server, conn *websocket.Conn, mode string) *Client {
 	client := &Client{
 		clientId:  clientId,
 		server:    server,
@@ -212,18 +248,19 @@ func NewWsClient(userId uint64, clientId string, server *Server, conn *websocket
 		connType:  ConnTypeWs,
 		tcpConn:   nil,
 		wsConn:    conn,
-		readCh:    make(chan *Message, 1000),
-		writeCh:   make(chan *Message, 1000),
+		readCh:    make(chan []byte, 1000),
+		writeCh:   make(chan []byte, 1000),
 		closeCh:   make(chan byte),
 		mutex:     sync.Mutex{},
 		isRunning: true,
+		mode:      mode,
 	}
 	go client.ReadMessage()
 	go client.WriteMessage()
 	return client
 }
 
-func NewTcpClient(userId uint64, clientId string, server *Server, conn *net.TCPConn) *Client {
+func NewTcpClient(userId uint64, clientId string, server *Server, conn *net.TCPConn, mode string) *Client {
 	client := &Client{
 		clientId:  clientId,
 		server:    server,
@@ -231,11 +268,12 @@ func NewTcpClient(userId uint64, clientId string, server *Server, conn *net.TCPC
 		connType:  ConnTypeTcp,
 		tcpConn:   conn,
 		wsConn:    nil,
-		readCh:    make(chan *Message, 1000),
-		writeCh:   make(chan *Message, 1000),
+		readCh:    make(chan []byte, 1000),
+		writeCh:   make(chan []byte, 1000),
 		closeCh:   make(chan byte),
 		mutex:     sync.Mutex{},
 		isRunning: true,
+		mode:      mode,
 	}
 	go client.ReadMessage()
 	go client.WriteMessage()

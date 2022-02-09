@@ -12,6 +12,9 @@ type TextMessage struct {
 	AtUserId  string `json:"at_user_id"`
 }
 
+type AuthMessage struct {
+	Token string `json:"token"`
+}
 //type LocationMessage struct {
 //	Id uint64 `json:"id"`
 //	cover_image string `json:"cover_image"`

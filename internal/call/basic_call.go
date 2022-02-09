@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"jim_message/pkg"
 	"time"
 )
 
@@ -18,9 +17,7 @@ type BasicCall struct {
 }
 
 func (c *BasicCall) GetClientConn(host string,port uint) (*grpc.ClientConn, context.CancelFunc) {
-	defer func() {
-		pkg.Close()
-	}()
+
 	address := fmt.Sprintf("%s:%d", host, port)
 	connCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	conn, err := grpc.DialContext(connCtx, address,

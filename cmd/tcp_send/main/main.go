@@ -10,8 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"io"
-	"jim_message/internal/manager"
-	"jim_message/pkg"
+	"jim_gateway/internal/manager"
+	"jim_gateway/pkg"
 	"net"
 	"os"
 	"sync"
@@ -71,7 +71,10 @@ func ReadMessage(clientConn *net.TCPConn) {
 				return
 			}
 		} else {
-			color.Yellow("received message:%s", string(data[manager.HeaderFlagLen+manager.HeaderBodyLen:]))
+			message:=string(data[manager.HeaderFlagLen+manager.HeaderBodyLen:])
+			if message!="ping"{
+				color.Yellow("received message:%s",message)
+			}
 		}
 	}
 }

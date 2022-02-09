@@ -5,6 +5,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+	"jim_gateway/internal/call"
+	"jim_gateway/pkg"
 	"net/http"
 )
 
@@ -38,15 +40,16 @@ func (ws webSocket) handleConnection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	client := NewWsClient(userId, clientId, ws.server, conn)
+	client := NewWsClient(userId, clientId, ws.server, conn,pkg.Conf.Runtime.Mode)
 	ws.server.AddClient(client)
 
 	clientManager := GetClientManagerInstance()
 	clientManager.Connect(client)
 
-	message := NewMessage(0, userId, []byte("welcome"))
-	client.Send(message)
-
+	if pkg.Conf.Runtime.Mode==ModelGrpc.String(){
+		call.RegisterClient(pkg.Conf.Gateway.Id,clientId)
+	}
+	client.Send([]byte("welcome"))
 }
 
 func StartWsServer(host string, port uint) {

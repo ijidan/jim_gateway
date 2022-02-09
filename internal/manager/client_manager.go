@@ -18,8 +18,10 @@ type ClientManager struct {
 }
 
 func (m *ClientManager) Connect(client *Client) {
-	m.connCh <- client
-	m.broadcastCh <- client
+	if client.clientId!="" && client.userId!=0{
+		m.connCh <- client
+		m.broadcastCh <- client
+	}
 }
 
 func (m *ClientManager) DisConnect(client *Client) {
@@ -45,7 +47,7 @@ func (m *ClientManager) Loop() {
 	for {
 		select {
 		case client := <-m.connCh:
-			color.Red("client num:%d", m.GetUserIdCnt())
+			color.Red("client connect success:%s", client.clientId)
 			m.clientUserIdMap.Store(client, client.userId)
 			m.clientIdClientMap.Store(client.clientId,client)
 			break
@@ -58,8 +60,7 @@ func (m *ClientManager) Loop() {
 			m.clientUserIdMap.Range(func(key, value interface{}) bool {
 				_client := key.(*Client)
 				m := fmt.Sprintf("user %d logined,client total:%d", _client.userId, total)
-				message := NewMessage(0, _client.userId, []byte(m))
-				_client.Send(message)
+				_client.Send([]byte(m))
 				return true
 			})
 			break

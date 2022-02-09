@@ -4,7 +4,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"io"
-	"jim_message/config"
+	"jim_gateway/config"
 	"path/filepath"
 	"runtime"
 )
@@ -27,6 +27,6 @@ func init() {
 	Root = filepath.Dir(filepath.Dir(file))
 	Conf = config.GetConfigInstance(Root)
 	Logger = GetLoggerInstance(Conf, Root)
-	Tracer, Closer = NewJaeger(*Conf, "jim_message")
+	Tracer, Closer = NewJaeger(*Conf, "jim_gateway")
 	RequestId = "X-Request-Id"
 }

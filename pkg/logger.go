@@ -4,7 +4,7 @@ import (
 	"github.com/mattn/go-colorable"
 	"github.com/sirupsen/logrus"
 	"io"
-	"jim_message/config"
+	"jim_gateway/config"
 	"os"
 	"sync"
 )

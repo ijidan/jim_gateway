@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/Shopify/sarama"
 	"github.com/fatih/color"
-	"jim_message/pkg"
+	"jim_gateway/pkg"
 )
 
 func PublishCmdLogin(gatewayId uint64,userId uint64) error {

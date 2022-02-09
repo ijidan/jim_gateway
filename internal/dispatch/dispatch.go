@@ -17,3 +17,4 @@ type CmdLogin struct {
 type CmdC2C struct {
 	Cmd string `json:"cmd"`
 }
+

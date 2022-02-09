@@ -40,6 +40,12 @@ type Config struct {
 	PubSub struct{
 		Brokers []string `yaml:"brokers"`
 	}
+	Gateway struct{
+		Id uint64 `yaml:"id"`
+	}
+	Runtime struct{
+		Mode string `yaml:"mode"`
+	}
 }
 
 var (

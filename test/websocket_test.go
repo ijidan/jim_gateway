@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
-	"jim_message/pkg"
+	"jim_gateway/pkg"
 	"net/url"
 	"testing"
 )

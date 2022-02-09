@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"jim_gateway/pkg"
 	"net"
 )
 
@@ -33,7 +34,7 @@ func StartTcpServer(host string, port uint) {
 			logrus.Fatalf("tcp accept error:%s", err2.Error())
 		}
 		var server = NewServer(address)
-		client := NewTcpClient(0, "", server, conn)
+		client := NewTcpClient(0, "", server, conn, pkg.Conf.Runtime.Mode)
 		server.AddClient(client)
 		clientManager.Connect(client)
 	}

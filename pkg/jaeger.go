@@ -6,7 +6,7 @@ import (
 	"github.com/uber/jaeger-client-go"
 	"github.com/uber/jaeger-client-go/config"
 	"io"
-	jconfig "jim_message/config"
+	jconfig "jim_gateway/config"
 )
 
 func NewJaeger(conf jconfig.Config, serviceName string) (opentracing.Tracer, io.Closer) {
