@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/fatih/color"
-	"jim_gateway/internal/call"
 	"jim_gateway/internal/dispatch"
 	"jim_gateway/internal/manager"
 	"jim_gateway/pkg"
@@ -13,8 +12,8 @@ func main() {
 	go manager.StartTcpServer(pkg.Conf.Tcp.Host, pkg.Conf.Tcp.Port)
 
 	if pkg.Conf.Runtime.Mode==manager.ModelGrpc.String(){
-		go call.RegisterGateway(pkg.Conf.Gateway.Id)
-		go call.ReadMessageFromGrpc()
+		go manager.RegisterGateway(pkg.Conf.Gateway.Id)
+		go manager.ReadMessageFromGrpc()
 	}
 
 	if pkg.Conf.Runtime.Mode==manager.ModelKafka.String(){

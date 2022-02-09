@@ -1,5 +1,6 @@
 Jim相关文档
 ===
+>说明：写着玩的，里面包含其他代码
 ###运行模式
 * local
 * grpc
@@ -20,6 +21,15 @@ Jim相关文档
 ```json 
 {"cmd":"auth.not","data":{"tip":"not auth"}}
 ```
+* Ping：
+```json 
+{"cmd":"ping","data":{"tip":"ping"}}
+```
+* Pong：
+```json 
+{"cmd":"pong","data":{"tip":"ping"}}
+```
+
 * 单聊文本：
 ```json 
 {"cmd":"chat.c2c.txt","data":{"id":0,"content":"hello client 2","to_receiver_id":"client_2"}}  

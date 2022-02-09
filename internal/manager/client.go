@@ -9,12 +9,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/cast"
 	"io"
-	"jim_gateway/internal/call"
 	"jim_gateway/internal/jim_proto/proto_build"
 	"net"
-	"regexp"
 	"sync"
 	"time"
 )
@@ -110,9 +107,7 @@ func (c *Client) ReadMessage() {
 				}
 			}
 		}
-
 		color.Yellow("message received:%s", string(messageContent))
-
 		if c.mode==ModeLocal.String(){
 			var data json.RawMessage
 			msg := ClientMessage{
@@ -123,31 +118,12 @@ func (c *Client) ReadMessage() {
 			}
 			switch msg.Cmd {
 			case "auth.req":
-				var content AuthMessage
-				if err4 := json.Unmarshal(data, &content); err4 != nil {
-					color.Red("parse message err:%s", err4.Error())
-				}
-				token:=content.Token
-				clientId:=token
-
-				re := regexp.MustCompile("[0-9]+")
-				all:=re.FindAllString(clientId, -1)
-				userId:=all[0]
-
+				clientId,userId:=ParseAuthReqMessage(data)
 				c.clientId=clientId
-				c.userId=cast.ToUint64(userId)
-
+				c.userId=userId
 				clientManager.Connect(c)
 			case "chat.c2c.txt":
-				var content TextMessage
-				if err4 := json.Unmarshal(data, &content); err4 != nil {
-					color.Red("parse message err:%s", err4.Error())
-				}
-				toReceiverId := content.ToReceiverId
-				toClient := clientManager.GetClientByClientId(toReceiverId)
-				if toClient != nil && toClient.isRunning {
-					toClient.Send(messageContent)
-				}
+				ParseC2CTxtMessage(data,messageContent)
 			}
 		}
 		if c.mode==ModelGrpc.String(){
@@ -155,7 +131,7 @@ func (c *Client) ReadMessage() {
 				GatewayId: 1,
 				Data:      messageContent,
 			}
-			sendClient:=call.GetGatewayServiceSendMessageClient()
+			sendClient:=GetGatewayServiceSendMessageClient()
 			errSend1 := sendClient.Send(req)
 			if errSend1 != nil {
 				color.Red("send client send message error:%s", errSend1.Error())
