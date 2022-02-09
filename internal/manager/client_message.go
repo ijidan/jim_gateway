@@ -12,6 +12,11 @@ type ClientMessage struct {
 	Data interface{} `json:"data"`
 }
 
+type AuthMessage struct {
+	Token string `json:"token"`
+}
+
+
 type TextMessage struct {
 	Id           uint64 `json:"id"`
 	Content      string `json:"content"`
@@ -19,69 +24,76 @@ type TextMessage struct {
 	AtUserId     string `json:"at_user_id"`
 }
 
-type AuthMessage struct {
-	Token string `json:"token"`
+type LocationMessage struct {
+	Id         uint64  `json:"id"`
+	CoverImage string  `json:"cover_image"`
+	Lat        float32 `json:"lat"`
+	Lng        float32 `json:"lng"`
+	MapLink    string  `json:"map_link"`
+	Desc       string  `json:"desc"`
 }
 
-//type LocationMessage struct {
-//	Id uint64 `json:"id"`
-//	cover_image string `json:"cover_image"`
-//	Float lat
-//	double lng = 4;
-//	string map_link = 5;
-//	string desc = 6;
-//}
-//
-//
-////表情消息
-//message FaceMessage{
-//uint64 id = 1;
-//string symbol = 2;
-//}
-//*/
+type FaceMessage struct {
+	Id     uint64 `json:"id"`
+	Symbol string `json:"symbol"`
+}
 
-//
-//type C2CMessage struct {
-//	Type    string `yaml:"type"`
-//	Content string `yaml:"content"`
-//}
-//
-//type C2GMessage struct {
-//	Type    string `yaml:"type"`
-//	Content string `yaml:"content"`
-//}
+type SoundMessage struct {
+	Id      uint64 `json:"id"`
+	Url     string `json:"url"`
+	Size    uint64 `json:"size"`
+	Seconds uint64 `json:"seconds"`
+}
+type ImageMessageItem struct {
+	Type   uint64 `json:"type"`
+	Format uint64 `json:"format"`
+	Size   uint64 `json:"size"`
+	Width  uint64 `json:"width"`
+	Height uint64 `json:"height"`
+	Url    string `json:"url"`
+}
 
-//func ParseMessage(mode string, messageContent []byte) (string, uint64, error) {
-//	var clientId string
-//	var userId uint64
-//	var err error
-//	if mode == ModeLocal.String() {
-//		clientId, userId, err = ParseTcpMessage(messageContent)
-//	}
-//	if mode == ModelGrpc.String() {
-//		clientId, userId, err = ParseGrpcMessage(messageContent)
-//	}
-//	if mode == ModelKafka.String() {
-//	}
-//	return clientId, userId, err
-//}
+type ImageMessage struct {
+	Id               uint64             `json:"id"`
+	ImageMessageItem []ImageMessageItem `json:"image_message_item"`
+}
 
-func ParseAuthReqMessage(data json.RawMessage)(string,uint64)  {
+type FileMessage struct {
+	Id   uint64 `json:"id"`
+	Size uint64 `json:"size"`
+	Name string `json:"name"`
+	Url  string `json:"url"`
+}
+
+type VideoMessage struct {
+	Id          uint64 `json:"id"`
+	Size        uint64 `json:"size"`
+	Seconds     uint64 `json:"seconds"`
+	Url         string `json:"url"`
+	Format      string `json:"format"`
+	ThumbUrl    string `json:"thumb_url"`
+	ThumbSize   uint64 `json:"thumb_size"`
+	ThumbWidth  uint64 `json:"thumb_width"`
+	ThumbHeight uint64 `json:"thumb_height"`
+	ThumbFormat uint64 `json:"thumb_format"`
+}
+
+func ParseAuthReqMessage(data json.RawMessage) (string, uint64) {
 	var content AuthMessage
 	if err4 := json.Unmarshal(data, &content); err4 != nil {
 		color.Red("parse message err:%s", err4.Error())
 	}
-	token:=content.Token
-	clientId:=token
+	token := content.Token
+	clientId := token
 
 	re := regexp.MustCompile("[0-9]+")
-	all:=re.FindAllString(clientId, -1)
-	userId:=cast.ToUint64(all[0])
+	all := re.FindAllString(clientId, -1)
+	userId := cast.ToUint64(all[0])
 
-	return clientId,userId
+	return clientId, userId
 }
 
-func ParseC2CTxtMessage(data json.RawMessage,messageContent []byte)  {
+func ParseC2CTxtMessage(data json.RawMessage, messageContent []byte) {
 	clientManager := GetClientManagerInstance()
 	var content TextMessage
 	if err4 := json.Unmarshal(data, &content); err4 != nil {
@@ -89,60 +101,10 @@ func ParseC2CTxtMessage(data json.RawMessage,messageContent []byte)  {
 	}
 
 	toReceiverId := content.ToReceiverId
-	color.Cyan("parse txt message:%s",toReceiverId)
+	color.Cyan("parse txt message:%s", toReceiverId)
 	toClient := clientManager.GetClientByClientId(toReceiverId)
 
 	if toClient != nil && toClient.isRunning {
 		toClient.Send(messageContent)
 	}
 }
-
-//func ParseGrpcMessage(messageContent []byte) (string, uint64, error) {
-//	req := &proto_build.SendMessageRequest{
-//		GatewayId: 1,
-//		Data:      messageContent,
-//	}
-//	sendClient := call.GetGatewayServiceSendMessageClient()
-//	errSend1 := sendClient.Send(req)
-//	if errSend1 != nil {
-//		color.Red("send client send message error:%s", errSend1.Error())
-//	}
-//	return "", 0, nil
-//}
-//
-//func ParseTcpMessage(messageContent []byte) (string, uint64, error) {
-//	clientManager := GetClientManagerInstance()
-//	var data json.RawMessage
-//	msg := ClientMessage{
-//		Data: &data,
-//	}
-//	if err3 := json.Unmarshal(messageContent, &msg); err3 != nil {
-//		color.Red("parse message err:%s", err3.Error())
-//	}
-//	switch msg.Cmd {
-//	case "auth.req":
-//		var content AuthMessage
-//		if err4 := json.Unmarshal(data, &content); err4 != nil {
-//			color.Red("parse message err:%s", err4.Error())
-//		}
-//		token := content.Token
-//		clientId := token
-//
-//		re := regexp.MustCompile("[0-9]+")
-//		all := re.FindAllString(clientId, -1)
-//		userId := all[0]
-//
-//		return clientId, cast.ToUint64(userId), nil
-//	case "chat.c2c.txt":
-//		var content TextMessage
-//		if err4 := json.Unmarshal(data, &content); err4 != nil {
-//			color.Red("parse message err:%s", err4.Error())
-//		}
-//		toReceiverId := content.ToReceiverId
-//		toClient := clientManager.GetClientByClientId(toReceiverId)
-//		if toClient != nil && toClient.isRunning {
-//			toClient.Send(messageContent)
-//		}
-//	}
-//	return "", 0, nil
-//}
