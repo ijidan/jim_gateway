@@ -62,8 +62,7 @@ Jim相关文档
 ```json 
 {"cmd":"chat.c2c.video","data":{"id":0,"size":10240,"seconds":3600,"url":"https://example/a.mp4","format":0,"thumb_url":"https://example.com/a.png","thumb_size":1024,"thumb_width":500,"thumb_height":700,"thumb_format":2}}  
 ```
->视频格式 format(jpg-0,gif-1,png-2,bmp-3)
-
+>视频格式：format(jpg-0,gif-1,png-2,bmp-3)  
 >图片格式：thumb_format (mp4-0, mov-1, wmv-2, flv-3, avi-4, mkv-5)
 ###实际效果
 |说明|截图|
