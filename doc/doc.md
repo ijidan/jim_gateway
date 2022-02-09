@@ -49,7 +49,7 @@ Jim相关文档
 ```
 * 单聊图片信息：
 ```json 
-{"cmd":"chat.c2c.imgae","data":{"id":0,image_message_item":["format":2,"size":10240,"width":500,"height":700,"url":""https://www.baidu.com/img/flexible/logo/pc/result.png"]}}  
+{"cmd":"chat.c2c.imgae","data":{"id":0,"image_message_item ":[{"format":2,"size ":10240,"width ":500,"height ":700,"url ":"https: //www.baidu.com/img/flexible/logo/pc/result.png"}]}}
 ```
 >图片格式：format(jpg-0,gif-1,png-2,bmp-3)
 
