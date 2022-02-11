@@ -11,7 +11,7 @@ Jim相关文档
 ###消息协议
 * 认证消息：
 ```json 
-{"cmd":"auth.req","data":{"token":"client_1"}}
+{"cmd":"a**uth.req","d**ata":{"token":"client_1"}}
 ```
 * 认证失败：
 ```json 
