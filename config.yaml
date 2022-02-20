@@ -27,4 +27,4 @@ gateway:
   id: g1
 
 runtime:
-  mode : kafka #local kafka grpc
+  mode : grpc #local kafka grpc

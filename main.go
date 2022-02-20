@@ -10,10 +10,10 @@ func main() {
 	go manager.StartWsServer(pkg.Conf.Websocket.Host, pkg.Conf.Websocket.Port)
 	go manager.StartTcpServer(pkg.Conf.Tcp.Host, pkg.Conf.Tcp.Port)
 
-	if pkg.Conf.Runtime.Mode == manager.ModelGrpc.String() || pkg.Conf.Runtime.Mode == manager.ModelKafka.String() {
-		go manager.RegisterGateway(pkg.Conf.Gateway.Id)
-		go manager.ReadMessageFromGrpc()
-	}
+	//if pkg.Conf.Runtime.Mode == manager.ModelGrpc.String() || pkg.Conf.Runtime.Mode == manager.ModelKafka.String() {
+	//	go manager.RegisterGateway(pkg.Conf.Gateway.Id)
+	//	go manager.ReadMessageFromGrpc()
+	//}
 
 	if pkg.Conf.Runtime.Mode == manager.ModelKafka.String() {
 		go func() {

@@ -52,7 +52,7 @@ func (c *Client) ReadMessage() {
 		var err error
 		if c.connType == ConnTypeTcp {
 			reader := bufio.NewReader(c.tcpConn)
-			header, err0 := reader.Peek(HeaderFlagLen + HeaderBodyLen)
+			header, err0 := reader.Peek(BusinessHeaderFlagLen + BusinessHeaderCmdLen + BusinessHeaderRequestIdLen + BusinessHeaderContentLen)
 			if err0 != nil {
 				if err0 == io.EOF {
 					continue
@@ -61,11 +61,11 @@ func (c *Client) ReadMessage() {
 					return
 				}
 			}
-			if !bytes.HasPrefix(header, HeaderFlag) {
+			if !bytes.HasPrefix(header, []byte(BusinessHeaderFlag)) {
 				c.Close(errors.New("header flag error"))
 				return
 			}
-			headerBody := bytes.TrimPrefix(header, HeaderFlag)
+			headerBody := header[BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen:]
 			buffer := bytes.NewBuffer(headerBody)
 			var bodyLen int32
 			err2 := binary.Read(buffer, binary.BigEndian, &bodyLen)
@@ -77,10 +77,10 @@ func (c *Client) ReadMessage() {
 					return
 				}
 			}
-			if int32(reader.Buffered()) < HeaderFlagLen+HeaderBodyLen+bodyLen {
+			if int32(reader.Buffered()) < BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen+bodyLen {
 				continue
 			}
-			data := make([]byte, HeaderFlagLen+HeaderBodyLen+bodyLen)
+			data := make([]byte, BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen+bodyLen)
 			_, err3 := reader.Read(data)
 			if err3 != nil {
 				if err3 == io.EOF {
@@ -90,7 +90,7 @@ func (c *Client) ReadMessage() {
 					return
 				}
 			}
-			messageContent = data[HeaderFlagLen+HeaderBodyLen:]
+			messageContent = data[BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen:]
 		} else {
 			_, messageContent, err = c.wsConn.ReadMessage()
 			if err != nil {
@@ -158,8 +158,10 @@ func (c *Client) WriteMessage() {
 			message := NewMessage(0, c.userId, []byte("ping"))
 			var err error
 			if c.connType == ConnTypeTcp {
-				content, _ := Pack("ping")
-				color.Green("message send:%s", string(message.data))
+
+				requestId := uint32(time.Now().Unix())
+				content, _ := BusinessPack(BusinessCmdPing, requestId, "PING")
+				color.Green("message send:%d", requestId)
 				_, err = c.tcpConn.Write(content)
 			} else {
 				err = c.wsConn.WriteMessage(websocket.TextMessage, message.data)
@@ -173,8 +175,7 @@ func (c *Client) WriteMessage() {
 			if ok {
 				var err error
 				if c.connType == ConnTypeTcp {
-					content, _ := Pack(string(message))
-					_, err = c.tcpConn.Write(content)
+					_, err = c.tcpConn.Write([]byte(message))
 				} else {
 					err = c.wsConn.WriteMessage(websocket.TextMessage, message)
 				}
