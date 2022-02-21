@@ -20,6 +20,7 @@ import (
 
 var id = flag.Int("id", 0, "client id")
 var mutex = sync.Mutex{}
+var ticker = time.NewTicker(1 * time.Second)
 
 func connect(address *net.TCPAddr, clientId string, userId int) *net.TCPConn {
 	clientConn, err := net.DialTCP("tcp", nil, address)
@@ -28,10 +29,16 @@ func connect(address *net.TCPAddr, clientId string, userId int) *net.TCPConn {
 		return nil
 	}
 	go ReadMessage(clientConn)
+	go HeartBeat(clientConn)
 	return clientConn
 }
 
 func ReadMessage(clientConn *net.TCPConn) {
+	err99 := clientConn.SetDeadline(time.Now().Add(1 * time.Minute))
+	if err99 != nil {
+		Close(clientConn)
+		return
+	}
 	for {
 		reader := bufio.NewReader(clientConn)
 		header, err1 := reader.Peek(manager.BusinessHeaderFlagLen + manager.BusinessHeaderCmdLen + manager.BusinessHeaderRequestIdLen + manager.BusinessHeaderContentLen)
@@ -43,12 +50,10 @@ func ReadMessage(clientConn *net.TCPConn) {
 				return
 			}
 		}
-		color.Yellow("1111111111111")
 		if !bytes.HasPrefix(header, []byte(manager.BusinessHeaderFlag)) {
 			Close(clientConn)
 			return
 		}
-		color.Yellow("22222222222222")
 		headerBody := header[manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen+manager.BusinessHeaderRequestIdLen:]
 		buffer := bytes.NewBuffer(headerBody)
 		var bodyLen int32
@@ -61,14 +66,11 @@ func ReadMessage(clientConn *net.TCPConn) {
 				return
 			}
 		}
-		color.Yellow("333333333333333333")
 		if int32(reader.Buffered()) < manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen+manager.BusinessHeaderRequestIdLen+manager.BusinessHeaderContentLen+bodyLen {
-			color.Yellow("4444444444444444")
 			continue
 		}
 		data := make([]byte, manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen+manager.BusinessHeaderRequestIdLen+manager.BusinessHeaderContentLen+bodyLen)
 		_, err3 := reader.Read(data)
-		color.Yellow("555555555:%s", string(data))
 		if err3 != nil {
 			if err3 == io.EOF {
 				continue
@@ -77,9 +79,16 @@ func ReadMessage(clientConn *net.TCPConn) {
 				return
 			}
 		} else {
-			requestId := data[manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen : manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen+manager.BusinessHeaderRequestIdLen]
-			color.Yellow("received requestId:%d", manager.BytesToUint32(requestId))
-
+			headerCmd := data[manager.BusinessHeaderFlagLen : manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen]
+			if bytes.Compare(headerCmd, []byte(manager.BusinessCmdPong)) == 0 {
+				err88 := clientConn.SetDeadline(time.Now().Add(1 * time.Minute))
+				if err88 != nil {
+					Close(clientConn)
+					return
+				}
+			}
+			//requestId := data[manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen : manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen+manager.BusinessHeaderRequestIdLen]
+			//color.Yellow("received requestId:%d", manager.BytesToUint32(requestId))
 			message := string(data[manager.BusinessHeaderFlagLen+manager.BusinessHeaderCmdLen+manager.BusinessHeaderRequestIdLen+manager.BusinessHeaderContentLen:])
 			if message != "ping" {
 				color.Yellow("received message:%s", message)
@@ -88,9 +97,24 @@ func ReadMessage(clientConn *net.TCPConn) {
 	}
 }
 
+func HeartBeat(clientConn *net.TCPConn) {
+	for {
+		select {
+		case <-ticker.C:
+			content, _ := manager.BusinessPack(manager.BusinessCmdPing, 0, "ping")
+			color.Green("heart beat:ping")
+			_, err := clientConn.Write(content)
+			if err != nil {
+				color.Red("heart beat error:%s", err.Error())
+			}
+		}
+	}
+}
+
 func Close(clientConn *net.TCPConn) {
 	mutex.Lock()
 	_ = clientConn.Close()
+	ticker.Stop()
 	mutex.Unlock()
 }
 func main() {

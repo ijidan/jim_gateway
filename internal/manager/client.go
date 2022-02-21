@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"io"
-	"jim_gateway/internal/jim_proto/proto_build"
 	"net"
 	"sync"
 	"time"
@@ -44,6 +43,24 @@ func (c *Client) GetClientId() string {
 
 func (c *Client) ReadMessage() {
 	clientManager := GetClientManagerInstance()
+
+	if c.isRunning == false {
+		return
+	}
+
+	if c.connType == ConnTypeTcp {
+		err99 := c.tcpConn.SetDeadline(time.Now().Add(1 * time.Minute))
+		if err99 != nil {
+			c.Close(err99)
+			return
+		}
+	} else {
+		err99 := c.wsConn.SetReadDeadline(time.Now().Add(1 * time.Minute))
+		if err99 != nil {
+			c.Close(err99)
+			return
+		}
+	}
 	for {
 		if c.isRunning == false {
 			return
@@ -51,6 +68,7 @@ func (c *Client) ReadMessage() {
 		var messageContent []byte
 		var err error
 		if c.connType == ConnTypeTcp {
+
 			reader := bufio.NewReader(c.tcpConn)
 			header, err0 := reader.Peek(BusinessHeaderFlagLen + BusinessHeaderCmdLen + BusinessHeaderRequestIdLen + BusinessHeaderContentLen)
 			if err0 != nil {
@@ -61,10 +79,12 @@ func (c *Client) ReadMessage() {
 					return
 				}
 			}
+
 			if !bytes.HasPrefix(header, []byte(BusinessHeaderFlag)) {
 				c.Close(errors.New("header flag error"))
 				return
 			}
+
 			headerBody := header[BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen:]
 			buffer := bytes.NewBuffer(headerBody)
 			var bodyLen int32
@@ -77,6 +97,7 @@ func (c *Client) ReadMessage() {
 					return
 				}
 			}
+
 			if int32(reader.Buffered()) < BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen+bodyLen {
 				continue
 			}
@@ -90,6 +111,17 @@ func (c *Client) ReadMessage() {
 					return
 				}
 			}
+			headerCmd := data[BusinessHeaderFlagLen : BusinessHeaderFlagLen+BusinessHeaderCmdLen]
+			color.Red("header cmd:%s", string(headerCmd))
+
+			if bytes.Compare(headerCmd, []byte(BusinessCmdPing)) == 0 {
+				//content, _ := BusinessPack(BusinessCmdPong, 0, "pong")
+				//_, err4 := c.tcpConn.Write(content)
+				//if err4 != nil {
+				//	c.Close(err4)
+				//	return
+				//}
+			}
 			messageContent = data[BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen:]
 		} else {
 			_, messageContent, err = c.wsConn.ReadMessage()
@@ -102,6 +134,11 @@ func (c *Client) ReadMessage() {
 					return
 				}
 			}
+		}
+		err88 := c.tcpConn.SetDeadline(time.Now().Add(1 * time.Minute))
+		if err88 != nil {
+			c.Close(err88)
+			return
 		}
 		color.Yellow("message received:%s", string(messageContent))
 		if c.mode == ModeLocal.String() {
@@ -123,15 +160,15 @@ func (c *Client) ReadMessage() {
 			}
 		}
 		if c.mode == ModelGrpc.String() {
-			req := &proto_build.SendMessageRequest{
-				GatewayId: c.gatewayId,
-				Data:      messageContent,
-			}
-			sendClient := GetGatewayServiceSendMessageClient()
-			errSend1 := sendClient.Send(req)
-			if errSend1 != nil {
-				color.Red("send client send message error:%s", errSend1.Error())
-			}
+			//req := &proto_build.SendMessageRequest{
+			//	GatewayId: c.gatewayId,
+			//	Data:      messageContent,
+			//}
+			//sendClient := GetGatewayServiceSendMessageClient()
+			//errSend1 := sendClient.Send(req)
+			//if errSend1 != nil {
+			//	color.Red("send client send message error:%s", errSend1.Error())
+			//}
 		}
 
 		if c.mode == ModelKafka.String() {
@@ -143,7 +180,7 @@ func (c *Client) ReadMessage() {
 	}
 }
 func (c *Client) WriteMessage() {
-	ticker := time.NewTicker(1 * time.Second)
+	//ticker := time.NewTicker(1 * time.Second)
 	for {
 		if c.isRunning == false {
 			return
@@ -152,25 +189,25 @@ func (c *Client) WriteMessage() {
 		case <-c.closeCh:
 			close(c.readCh)
 			close(c.writeCh)
-			ticker.Stop()
+			//ticker.Stop()
 			return
-		case <-ticker.C:
-			message := NewMessage(0, c.userId, []byte("ping"))
-			var err error
-			if c.connType == ConnTypeTcp {
-
-				requestId := uint32(time.Now().Unix())
-				content, _ := BusinessPack(BusinessCmdPing, requestId, "PING")
-				color.Green("message send:%d", requestId)
-				_, err = c.tcpConn.Write(content)
-			} else {
-				err = c.wsConn.WriteMessage(websocket.TextMessage, message.data)
-			}
-			if err != nil {
-				c.Close(err)
-				color.Red("send message error:%s", err.Error())
-				return
-			}
+		//case <-ticker.C:
+		//	message := NewMessage(0, c.userId, []byte("ping"))
+		//	var err error
+		//	if c.connType == ConnTypeTcp {
+		//
+		//		requestId := uint32(time.Now().Unix())
+		//		content, _ := BusinessPack(BusinessCmdPing, requestId, "PING")
+		//		color.Green("message send:%d", requestId)
+		//		_, err = c.tcpConn.Write(content)
+		//	} else {
+		//		err = c.wsConn.WriteMessage(websocket.TextMessage, message.data)
+		//	}
+		//	if err != nil {
+		//		c.Close(err)
+		//		color.Red("send message error:%s", err.Error())
+		//		return
+		//	}
 		case message, ok := <-c.writeCh:
 			if ok {
 				var err error
