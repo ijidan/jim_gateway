@@ -47,20 +47,20 @@ func RegisterGateway(gatewayId string)  {
 	}
 }
 
-func RegisterClient(gatewayId string,clientId string)  {
+func RegisterClient(gatewayId string,clientId string) (*proto_build.RegisterResponse, error) {
 	client:=GetGatewayServiceClientInstance()
 	req:=&proto_build.RegisterRequest{
 		GatewayId: gatewayId,
 		ClientId:  clientId,
 	}
-	_,_=client.Register(context.TODO(),req)
+	return client.Register(context.TODO(),req)
 }
 
-func UnRegisterClient(gatewayId string,clientId string)  {
+func UnRegisterClient(gatewayId string,clientId string)(*proto_build.UnRegisterResponse, error)  {
 	client:=GetGatewayServiceClientInstance()
 	req:=&proto_build.UnRegisterRequest{
 		GatewayId: gatewayId,
 		ClientId:  clientId,
 	}
-	_,_=client.UnRegister(context.TODO(),req)
+	return client.UnRegister(context.TODO(),req)
 }

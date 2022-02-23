@@ -108,3 +108,8 @@ func ParseC2CTxtMessage(data json.RawMessage, messageContent []byte) {
 		toClient.Send(messageContent)
 	}
 }
+
+type AuthLoginMessage struct {
+	ClientId string `json:"client_id"`
+	Token    string `json:"token"`
+}

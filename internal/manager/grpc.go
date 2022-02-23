@@ -1,30 +1,29 @@
 package manager
 
-import (
-	"encoding/json"
-	"github.com/fatih/color"
-)
+import "github.com/fatih/color"
 
 func ReadMessageFromGrpc() {
 	sendClient := GetGatewayServiceSendMessageClient()
+	clientManager := GetClientManagerInstance()
 	go func() {
 		for {
 			rsp, err := sendClient.Recv()
 			if err != nil {
+				color.Red("received grpc message error:%s",err.Error())
 				return
 			}
-			color.Yellow("receive grpc message success:%s", string(rsp.Data))
-			var data json.RawMessage
-			msg := ClientMessage{
-				Data: &data,
-			}
-			if err3 := json.Unmarshal(rsp.Data, &msg); err3 != nil {
-				color.Red("parse message err:%s", err3.Error())
-			}
-			color.Cyan("parse grpc message:%s",msg.Cmd)
-			switch msg.Cmd {
-			case "chat.c2c.txt":
-				ParseC2CTxtMessage(data, rsp.Data)
+			//gatewayId := rsp.GatewayId
+			cmd :=rsp.Cmd
+			requestId:=rsp.RequestId
+			data:=rsp.GetData()
+			receiverId:=rsp.ReceiverId
+
+			color.Cyan("received grpc message:%s,%s,%s,%s",cmd,receiverId,receiverId,string(data))
+			receiveClient := clientManager.GetClientByClientId(receiverId)
+
+			if receiveClient != nil && receiveClient.isRunning {
+				content, _ := BusinessPack(cmd, requestId, string(data))
+				receiveClient.Send(content)
 			}
 		}
 	}()

@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"io"
+	"jim_gateway/internal/jim_proto/proto_build"
 	"net"
 	"sync"
 	"time"
@@ -43,11 +44,9 @@ func (c *Client) GetClientId() string {
 
 func (c *Client) ReadMessage() {
 	clientManager := GetClientManagerInstance()
-
 	if c.isRunning == false {
 		return
 	}
-
 	if c.connType == ConnTypeTcp {
 		err99 := c.tcpConn.SetDeadline(time.Now().Add(1 * time.Minute))
 		if err99 != nil {
@@ -66,117 +65,157 @@ func (c *Client) ReadMessage() {
 			return
 		}
 		var messageContent []byte
-		var err error
-		if c.connType == ConnTypeTcp {
+		//var err error
+		//if c.connType == ConnTypeTcp {
 
-			reader := bufio.NewReader(c.tcpConn)
-			header, err0 := reader.Peek(BusinessHeaderFlagLen + BusinessHeaderCmdLen + BusinessHeaderRequestIdLen + BusinessHeaderContentLen)
-			if err0 != nil {
-				if err0 == io.EOF {
-					continue
-				} else {
-					c.Close(err0)
-					return
-				}
-			}
-
-			if !bytes.HasPrefix(header, []byte(BusinessHeaderFlag)) {
-				c.Close(errors.New("header flag error"))
+		reader := bufio.NewReader(c.tcpConn)
+		header, err0 := reader.Peek(BusinessHeaderFlagLen + BusinessHeaderCmdLen + BusinessHeaderRequestIdLen + BusinessHeaderContentLen)
+		if err0 != nil {
+			if err0 == io.EOF {
+				continue
+			} else {
+				c.Close(err0)
 				return
 			}
+		}
 
-			headerBody := header[BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen:]
-			buffer := bytes.NewBuffer(headerBody)
-			var bodyLen int32
-			err2 := binary.Read(buffer, binary.BigEndian, &bodyLen)
-			if err2 != nil {
-				if err2 == io.EOF {
-					continue
-				} else {
-					c.Close(err2)
-					return
-				}
-			}
+		if !bytes.HasPrefix(header, []byte(BusinessHeaderFlag)) {
+			c.Close(errors.New("header flag error"))
+			return
+		}
 
-			if int32(reader.Buffered()) < BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen+bodyLen {
+		headerBody := header[BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen:]
+		buffer := bytes.NewBuffer(headerBody)
+		var bodyLen int32
+		err2 := binary.Read(buffer, binary.BigEndian, &bodyLen)
+		if err2 != nil {
+			if err2 == io.EOF {
 				continue
-			}
-			data := make([]byte, BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen+bodyLen)
-			_, err3 := reader.Read(data)
-			if err3 != nil {
-				if err3 == io.EOF {
-					continue
-				} else {
-					c.Close(err3)
-					return
-				}
-			}
-			headerCmd := data[BusinessHeaderFlagLen : BusinessHeaderFlagLen+BusinessHeaderCmdLen]
-			color.Red("header cmd:%s", string(headerCmd))
-
-			if bytes.Compare(headerCmd, []byte(BusinessCmdPing)) == 0 {
-				//content, _ := BusinessPack(BusinessCmdPong, 0, "pong")
-				//_, err4 := c.tcpConn.Write(content)
-				//if err4 != nil {
-				//	c.Close(err4)
-				//	return
-				//}
-			}
-			messageContent = data[BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen:]
-		} else {
-			_, messageContent, err = c.wsConn.ReadMessage()
-			if err != nil {
-				if err == io.EOF {
-					continue
-				} else {
-					color.Red("message read error:" + err.Error())
-					c.Close(err)
-					return
-				}
+			} else {
+				c.Close(err2)
+				return
 			}
 		}
+
+		if int32(reader.Buffered()) < BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen+bodyLen {
+			continue
+		}
+		data := make([]byte, BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen+bodyLen)
+		_, err3 := reader.Read(data)
+		if err3 != nil {
+			if err3 == io.EOF {
+				continue
+			} else {
+				c.Close(err3)
+				return
+			}
+		}
+		headerCmd := string(data[BusinessHeaderFlagLen : BusinessHeaderFlagLen+BusinessHeaderCmdLen])
+		requestId := BytesToUint32(data[BusinessHeaderFlagLen+BusinessHeaderCmdLen : BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen])
+		messageContent = data[BusinessHeaderFlagLen+BusinessHeaderCmdLen+BusinessHeaderRequestIdLen+BusinessHeaderContentLen:]
+
+		switch headerCmd {
+		case BusinessCmdPing:
+			content, _ := BusinessPack(BusinessCmdPong, 0, "pong")
+			_, err4 := c.tcpConn.Write(content)
+			if err4 != nil {
+				c.Close(err4)
+				return
+			}
+		case BusinessCmdAuthLogin:
+			var authLogin AuthLoginMessage
+			_=json.Unmarshal(messageContent,&authLogin)
+			clientId:=authLogin.ClientId
+			token:=authLogin.Token
+			c.clientId=clientId
+			c.userId=ParseToken(token)
+			_, errLogin := RegisterClient(c.gatewayId, c.clientId)
+			if errLogin != nil {
+				c.Close(errLogin)
+				return
+			}
+			clientManager.Connect(c)
+			content, _ := BusinessPack(BusinessCmdAuthSuccess, 0, "auth success")
+			_, err4 := c.tcpConn.Write(content)
+			if err4 != nil {
+				c.Close(err4)
+				return
+			}
+		case BusinessCmdAuthLogout:
+			_, errLogout := UnRegisterClient(c.gatewayId, c.clientId)
+			if errLogout != nil {
+				c.Close(errLogout)
+				return
+			}
+			content, _ := BusinessPack(BusinessCmdServerClose, 0, "client close")
+			_, err5 := c.tcpConn.Write(content)
+			if err5 != nil {
+				c.Close(err5)
+				return
+			}
+		default:
+			color.Yellow("received message:%s",string(messageContent))
+			req := &proto_build.SendMessageRequest{
+				GatewayId: c.gatewayId,
+				Cmd:       headerCmd,
+				RequestId: requestId,
+				Data:      messageContent,
+			}
+
+			color.Red("grpc send gateway...............%s", c.gatewayId)
+			color.Red("grpc send cmd...............%s", headerCmd)
+			color.Red("grpc send requestId...............%d",requestId)
+			color.Red("grpc send data...............%s", string(messageContent))
+
+			sendClient := GetGatewayServiceSendMessageClient()
+			errSend1 := sendClient.Send(req)
+			if errSend1 != nil {
+				color.Red("send client send message error:%s", errSend1.Error())
+				c.Close(errSend1)
+				return
+			}
+		}
+
+		//}
+		//else {
+		//	_, messageContent, err = c.wsConn.ReadMessage()
+		//	if err != nil {
+		//		if err == io.EOF {
+		//			continue
+		//		} else {
+		//			color.Red("message read error:" + err.Error())
+		//			c.Close(err)
+		//			return
+		//		}
+		//	}
+		//}
 		err88 := c.tcpConn.SetDeadline(time.Now().Add(1 * time.Minute))
 		if err88 != nil {
 			c.Close(err88)
 			return
 		}
-		color.Yellow("message received:%s", string(messageContent))
-		if c.mode == ModeLocal.String() {
-			var data json.RawMessage
-			msg := ClientMessage{
-				Data: &data,
-			}
-			if err3 := json.Unmarshal(messageContent, &msg); err3 != nil {
-				color.Red("parse message err:%s", err3.Error())
-			}
-			switch msg.Cmd {
-			case "auth.req":
-				clientId, userId := ParseAuthReqMessage(data)
-				c.clientId = clientId
-				c.userId = userId
-				clientManager.Connect(c)
-			case "chat.c2c.txt":
-				ParseC2CTxtMessage(data, messageContent)
-			}
-		}
-		if c.mode == ModelGrpc.String() {
-			//req := &proto_build.SendMessageRequest{
-			//	GatewayId: c.gatewayId,
-			//	Data:      messageContent,
-			//}
-			//sendClient := GetGatewayServiceSendMessageClient()
-			//errSend1 := sendClient.Send(req)
-			//if errSend1 != nil {
-			//	color.Red("send client send message error:%s", errSend1.Error())
-			//}
+		if string(messageContent)!="ping"{
+			color.Yellow("message received:%s", string(messageContent))
 		}
 
-		if c.mode == ModelKafka.String() {
-			pubErr := PublishSendMessage(messageContent)
-			if pubErr != nil {
-				color.Red("publish message error:%s", pubErr.Error())
-			}
-		}
+		//if c.mode == ModeLocal.String() {
+		//	var data json.RawMessage
+		//	msg := ClientMessage{
+		//		Data: &data,
+		//	}
+		//	if err3 := json.Unmarshal(messageContent, &msg); err3 != nil {
+		//		color.Red("parse message err:%s", err3.Error())
+		//	}
+		//	switch msg.Cmd {
+		//	case "auth.req":
+		//		clientId, userId := ParseAuthReqMessage(data)
+		//		c.clientId = clientId
+		//		c.userId = userId
+		//		clientManager.Connect(c)
+		//	case "chat.c2c.txt":
+		//		ParseC2CTxtMessage(data, messageContent)
+		//	}
+		//}
 	}
 }
 func (c *Client) WriteMessage() {
@@ -212,7 +251,8 @@ func (c *Client) WriteMessage() {
 			if ok {
 				var err error
 				if c.connType == ConnTypeTcp {
-					_, err = c.tcpConn.Write([]byte(message))
+					color.Cyan("send message:%s,%s",string(message),c.clientId)
+					_, err = c.tcpConn.Write(message)
 				} else {
 					err = c.wsConn.WriteMessage(websocket.TextMessage, message)
 				}

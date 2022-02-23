@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"time"
 )
@@ -24,6 +25,10 @@ func (c *BasicCall) GetClientConn(host string,port uint) (*grpc.ClientConn, cont
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                10 * time.Second,
+			Timeout:             1 * time.Second,
+			PermitWithoutStream: true}),
 		)
 	if err != nil {
 		logrus.Fatalf("did not connect: %v", err)

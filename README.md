@@ -47,12 +47,12 @@ Jim相关文档
 
 * 表情信息：
 ```json 
-{"type":"face","data":{"sender_id":"1","sender_name":"用户1","sender_avatar":"https://www.baidu.com/img/flexible/logo/pc/result.png","receiver_id":"2","symbol":"[:smile]"}}```
+{"type":"face","data":{"sender_id":"1","sender_name":"用户1","sender_avatar":"https://www.baidu.com/img/flexible/logo/pc/result.png","receiver_id":"2","symbol":"[:smile]"}}
 ```
 
 * 语音信息：
 ```json 
-{"type":"sound","data":{"id":0,"url":"https://example.com/a.mp3","size":10240,"seconds":3600}}  
+{"type":"sound","data":{"sender_id":"1","sender_name":"用户1","sender_avatar":"https://www.baidu.com/img/flexible/logo/pc/result.png","receiver_id":"2","url":"https://example.com/a.mp3","size":10240,"seconds":3600}}  
 ```
 
 * 图片信息：
@@ -76,7 +76,7 @@ Jim相关文档
 
 * 确认信息：
 ```json 
-{"type":"ack","data":{"request_id":1233}}
+{"type":"ack","data":{"receiver_id":"2","request_id":1233,"message_id":89797}}
 ```
 >图片格式：format(jpg-0,gif-1,png-2,bmp-3)  
 >视频格式：thumb_format (mp4-0, mov-1, wmv-2, flv-3, avi-4, mkv-5)
@@ -84,5 +84,6 @@ Jim相关文档
 ### 实际效果
 | 说明     | 截图                                          |
 |--------|---------------------------------------------|
-| 单聊发送消息 | ![alt 单聊发送消息](c2c_send_txt.png "单聊发送消息")    |
-| 单聊接收消息 | ![alt 单聊接收消息](c2c_receive_txt.png "单聊接收消息") |
+| 心跳 | ![alt 心跳](ping_pong.jpg "单聊发送消息")    |
+| 单聊发送消息 | ![alt 单聊发送消息](c2c_text_send.png "单聊发送消息")    |
+| 单聊接收消息 | ![alt 单聊接收消息](c2c_text_receive.png "单聊接收消息") |

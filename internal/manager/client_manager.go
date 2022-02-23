@@ -60,7 +60,7 @@ func (m *ClientManager) Loop() {
 			m.clientUserIdMap.Range(func(key, value interface{}) bool {
 				_client := key.(*Client)
 				m := fmt.Sprintf("user %d logined,client total:%d", _client.userId, total)
-				_client.Send([]byte(m))
+				color.Yellow(m)
 				return true
 			})
 			break
