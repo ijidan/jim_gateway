@@ -117,11 +117,7 @@ func (c *Client) ReadMessage() {
 		switch headerCmd {
 		case BusinessCmdPing:
 			content, _ := BusinessPack(BusinessCmdPong, 0, "pong")
-			_, err4 := c.tcpConn.Write(content)
-			if err4 != nil {
-				c.Close(err4)
-				return
-			}
+			c.Send(content)
 		case BusinessCmdAuthLogin:
 			var authLogin AuthLoginMessage
 			_=json.Unmarshal(messageContent,&authLogin)
@@ -136,11 +132,7 @@ func (c *Client) ReadMessage() {
 			}
 			clientManager.Connect(c)
 			content, _ := BusinessPack(BusinessCmdAuthSuccess, 0, "auth success")
-			_, err4 := c.tcpConn.Write(content)
-			if err4 != nil {
-				c.Close(err4)
-				return
-			}
+			c.Send(content)
 		case BusinessCmdAuthLogout:
 			_, errLogout := UnRegisterClient(c.gatewayId, c.clientId)
 			if errLogout != nil {
@@ -148,11 +140,7 @@ func (c *Client) ReadMessage() {
 				return
 			}
 			content, _ := BusinessPack(BusinessCmdServerClose, 0, "client close")
-			_, err5 := c.tcpConn.Write(content)
-			if err5 != nil {
-				c.Close(err5)
-				return
-			}
+			c.Send(content)
 		default:
 			color.Yellow("received message:%s",string(messageContent))
 			req := &proto_build.SendMessageRequest{
@@ -162,10 +150,10 @@ func (c *Client) ReadMessage() {
 				Data:      messageContent,
 			}
 
-			color.Red("grpc send gateway...............%s", c.gatewayId)
-			color.Red("grpc send cmd...............%s", headerCmd)
-			color.Red("grpc send requestId...............%d",requestId)
-			color.Red("grpc send data...............%s", string(messageContent))
+			//color.Red("grpc send gateway...............%s", c.gatewayId)
+			//color.Red("grpc send cmd...............%s", headerCmd)
+			//color.Red("grpc send requestId...............%d",requestId)
+			//color.Red("grpc send data...............%s", string(messageContent))
 
 			sendClient := GetGatewayServiceSendMessageClient()
 			errSend1 := sendClient.Send(req)
@@ -251,7 +239,7 @@ func (c *Client) WriteMessage() {
 			if ok {
 				var err error
 				if c.connType == ConnTypeTcp {
-					color.Cyan("send message:%s,%s",string(message),c.clientId)
+					//color.Cyan("send message:%s,%s",string(message),c.clientId)
 					_, err = c.tcpConn.Write(message)
 				} else {
 					err = c.wsConn.WriteMessage(websocket.TextMessage, message)
@@ -272,7 +260,6 @@ func (c *Client) WriteMessage() {
 
 func (c *Client) Send(message []byte) {
 	if c.isRunning {
-		color.Green("message send:%s", string(message))
 		c.writeCh <- message
 	}
 }

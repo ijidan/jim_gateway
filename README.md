@@ -76,7 +76,7 @@ Jim相关文档
 
 * 确认信息：
 ```json 
-{"type":"ack","data":{"receiver_id":"2","request_id":1233,"message_id":89797}}
+{"type":"`ack`","data":{"receiver_id":"2","request_id":1233,"message_id":89797}}
 ```
 >图片格式：format(jpg-0,gif-1,png-2,bmp-3)  
 >视频格式：thumb_format (mp4-0, mov-1, wmv-2, flv-3, avi-4, mkv-5)
