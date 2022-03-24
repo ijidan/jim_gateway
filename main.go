@@ -3,6 +3,8 @@ package main
 import (
 	"jim_gateway/internal/manager"
 	"jim_gateway/pkg"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 func main() {
@@ -22,6 +24,7 @@ func main() {
 	//		}
 	//	}()
 	//}
+	_= http.ListenAndServe("0.0.0.0:6060", nil)
 
 	select {}
 }
