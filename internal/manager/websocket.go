@@ -1,9 +1,10 @@
 package manager
 
 import (
+	"context"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"jim_gateway/pkg"
 	"net/http"
@@ -49,7 +50,7 @@ func (ws webSocket) handleConnection(w http.ResponseWriter, r *http.Request) {
 	client.Send([]byte("welcome"))
 }
 
-func StartWsServer(host string, port uint) {
+func StartWsServer(host string, port uint,ctx context.Context)error {
 	clientManager := GetClientManagerInstance()
 	go clientManager.Loop()
 	defer func() {
@@ -59,10 +60,28 @@ func StartWsServer(host string, port uint) {
 	ws := webSocket{
 		upGrader: upGrader,
 	}
-	http.HandleFunc("/", ws.handleConnection)
-	err := http.ListenAndServe(address, nil)
-	if err != nil {
-		logrus.Fatalf("websocket listen error:%s", err.Error())
+	httpMutex := http.NewServeMux()
+	httpMutex.HandleFunc("/",ws.handleConnection)
+	httpServer := http.Server{
+		Addr:    address,
+		Handler: httpMutex,
 	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				color.Red("close websocket")
+				_ = httpServer.Shutdown(context.Background())
+				return
+			}
+		}
+	}()
+
+	return httpServer.ListenAndServe()
+
+
+
+
 
 }

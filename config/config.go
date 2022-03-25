@@ -17,6 +17,10 @@ type Config struct {
 		Ver  string `yaml:"ver"`
 		Env  string `yaml:"env"`
 	}
+	Pprof struct {
+		Host string `yaml:"host"`
+		Port uint `yaml:"port"`
+	}
 	Websocket struct {
 		Host string `yaml:"host"`
 		Port uint   `yaml:"port"`

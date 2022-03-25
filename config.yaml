@@ -2,14 +2,21 @@ app:
   name: jim_gateway
   ver: 1.0.1
   env: local
+
+pprof:
+    host: 127.0.0.1
+    port: 6060
+
 websocket:
   host: 127.0.0.1
   port: 9000
   log: log/websocket.log
+
 tcp:
   host: 127.0.0.1
   port: 9001
   log: log/tcp.log
+
 rpc:
   host: 127.0.0.1 #0.0.0.0
   port: 9093
