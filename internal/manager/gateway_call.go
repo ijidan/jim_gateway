@@ -39,8 +39,12 @@ func RegisterGateway(gatewayId string)  {
 	push,_:=client.SendMessage(context.TODO())
 	sendMessage:=&proto_build.SendMessageRequest{
 		GatewayId: gatewayId,
+		Cmd:       BusinessCmdPing,
+		RequestId: 0,
 		Data:      []byte("ping"),
+		SenderId:  gatewayId,
 	}
+
 	err:=push.Send(sendMessage)
 	if err!=nil{
 		color.Red("register gateway error:%s",err.Error())

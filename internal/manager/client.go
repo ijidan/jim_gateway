@@ -143,17 +143,18 @@ func (c *Client) ReadMessage() {
 			c.Send(content)
 		default:
 			color.Yellow("received message:%s",string(messageContent))
-			req := &proto_build.SendMessageRequest{
+			req:=&proto_build.SendMessageRequest{
 				GatewayId: c.gatewayId,
 				Cmd:       headerCmd,
 				RequestId: requestId,
 				Data:      messageContent,
+				SenderId:  c.gatewayId,
 			}
 
-			//color.Red("grpc send gateway...............%s", c.gatewayId)
-			//color.Red("grpc send cmd...............%s", headerCmd)
-			//color.Red("grpc send requestId...............%d",requestId)
-			//color.Red("grpc send data...............%s", string(messageContent))
+			color.Yellow("grpc send gateway...............%s", c.gatewayId)
+			color.Yellow("grpc send cmd...............%s", headerCmd)
+			color.Yellow("grpc send requestId...............%d",requestId)
+			color.Yellow("grpc send data...............%s", string(messageContent))
 
 			sendClient := GetGatewayServiceSendMessageClient()
 			errSend1 := sendClient.Send(req)
