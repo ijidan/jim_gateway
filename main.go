@@ -79,7 +79,7 @@ func main() {
 	//	}()
 	//}
 	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGILL, syscall.SIGQUIT, syscall.SIGTERM)
+	signal.Notify(ch, syscall.SIGINT,  syscall.SIGQUIT, syscall.SIGTERM)
 	<-ch
 	color.Red("closing ...")
 	cancel()
